@@ -1,1 +1,334 @@
-index
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+    <style>
+		#map {
+			width: 100%;
+			height: calc(100vh - 30px);
+			position: relative;
+		}
+		#gails-bakery-content {
+			position: absolute;
+			border: 3px solid red;
+			background: #fff;
+			padding: 20px;
+			width: 400px;
+			height: 400px;
+			top: 20px;
+			left: 20px;
+		}
+		footer {
+			background: red;
+			height: 30px;
+		}
+	</style>	
+
+    <title>Document</title>
+</head>
+<body>
+					
+		 
+					
+		<div id="map"></div>
+
+		<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB8RXZhQRVkA8YmsfOo096uF4I4Z1XlZUw&callback=initMap&libraries=places"></script>
+
+	<div id="gails-bakery-content">
+		<input id="postcode" type="text" placeholder="Enter a postcode">
+		<button onclick="checkPostcode()">Check Postcode</button>
+		<div id="message"></div>
+	</div> 
+
+	<script>
+	  let map;
+	  let userLocationMarker;
+	  let bakeryMarkers = [];
+	  let bakeryCircle;
+
+	  const circleRadius = 1000; // 1 km radius
+
+	  function initMap() {
+		const london = new google.maps.LatLng(51.5074, -0.1278);
+		map = new google.maps.Map(document.getElementById("map"), {
+		  center: london,
+		  zoom: 12,
+		});
+	  }
+
+  	function calculateDistance(lat1, lon1, lat2, lon2) {
+		const R = 6371; // Radius of the Earth in kilometers
+		const dLat = (lat2 - lat1) * (Math.PI / 180);
+		const dLon = (lon2 - lon1) * (Math.PI / 180);
+		const a = 
+		Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+		Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+		Math.sin(dLon / 2) * Math.sin(dLon / 2);
+		const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+		const distance = R * c;
+		return distance * 1000; // Convert to meters
+	}
+		
+		
+		
+	function isValidLondonPostcode(postcode) {
+  // Regular expression for valid London postcodes
+  // const londonPostcodeRegex = /^(E1|E2|E3|E4|E5|E6|E7|E8|E9|E10|E11|E12|E13|E14|E15|E16|E17|E18|E1W|EC1|EC1A|EC2|EC3|EC3P|EC4|N1|N2|N3|N4|N5|N6|N7|N8|N9|N10|N11|N12|N13|N14|N15|N16|N17|N18|N19|N20|N21|N22|NW1|NW2|NW3|NW4|NW5|NW6|NW7|NW8|NW9|NW10|NW11|SE1|SE2|SE3|SE4|SE5|SE6|SE7|SE8|SE9|SE10|SE11|SE12|SE13|SE14|SE15|SE16|SE17|SE18|SE19|SE20|SE21|SE22|SE23|SE24|SE25|SE26|SE27|SE28|SW1|SW1A|SW2|SW3|SW4|SW5|SW6|SW7|SW8|SW9|SW10|SW11|SW12|SW13|SW14|SW15|SW16|SW17|SW18|SW19|SW20|W1|W2|W3|W4|W5|W6|W7|W8|W9|W10|W11|W12|W13|W14|WC1|WC2|BR1|BR2|BR3|BR4|BR5|BR6|BR7|CR0|CR2|CR4|CR5|CR7|CR8|DA5|DA6|DA7|DA14|DA15|DA16|DA17|EN1|EN2|EN3|EN4|EN5|HA0|HA1|HA2|HA3|HA4|HA5|HA6|HA7|HA8|HA9|IG1|IG2|IG3|IG4|IG5|IG6|IG7|IG8|IG11|KT1|KT2|KT3|KT4|KT5|KT6|KT9|RM1|RM2|RM3|RM4|RM5|RM6|RM7|RM8|RM9|RM10|RM11|RM12|RM13|RM14|SM1|SM2|SM3|SM4|SM5|SM6|TW1|TW2|TW3|TW4|TW5|TW7|TW8|TW9|TW10|TW11|TW12|TW13|TW14|UB1|UB2|UB3|UB4|UB5|UB6|UB7|UB8|UB10|WD3|WD4|WD5|WD6|WD7|WD17|WD18|WD19|WD23|WD24|WD25)\s*\d[A-Z]{2}$/i;
+		
+		
+		/* Need to refactor this to add all from... https://crystalroof.co.uk/postcode-districts*/
+		
+		
+		const londonPostcodeRegex = /^(E1|E2|E3|E4|E5|E6|E7|E8|E9|E10|E11|E12|E13|E14|E15|E16|E17|E18|E1W|E20|E98|EC1A|EC1M|EC1N|EC1P|EC1R|EC1V|EC1Y|EC2A|EC2M|EC2N|EC2P|EC2R|EC2V|EC2Y|EC3A|EC3M|EC3N|EC3P|EC3R|EC3V|EC4A|EC4M|EC4N|EC4P|EC4R|EC4V|EC4Y|N1|N2|N3|N4|N5|N6|N7|N8|N9|N10|N11|N12|N13|N14|N15|N16|N17|N18|N19|N1C|N1P|N20|N21|N22|N81|NW1|NW2|NW3|NW4|NW5|NW6|NW7|NW8|NW9|NW10|NW11|NW1W|NW26|SE1|SE2|SE3|SE4|SE5|SE6|SE7|SE8|SE9|SE10|SE11|SE12|SE13|SE14|SE15|SE16|SE17|SE18|SE19|SE1P|SE20|SE21|SE22|SE23|SE24|SE25|SE26|SE27|SE28|SW2|SW3|SW4|SW5|SW6|SW7|SW8|SW9|SW10|SW11|SW12|SW13|SW14|SW15|SW16|SW17|SW18|SW19|SW1A|SW1E|SW1H|SW1P|SW1V|SW1W|SW1X|SW1Y|SW20|SW95|W2|W3|W4|W5|W6|W7|W8|W9|W10|W11|W12|W13|W14|W1A|W1B|W1C|W1D|W1F|W1G|W1H|W1J|W1K|W1S|W1T|W1U|W1W|WC1A|WC1B|WC1E|WC1H|WC1N|WC1R|WC1V|WC1X|WC2A|WC2B|WC2E|WC2H|WC2N|WC2R|BR1|BR2|BR3|BR4|BR5|BR6|BR7|BR8|CR0|CR2|CR3|CR4|CR5|CR6|CR7|CR8|CR9|CR44|CR90|DA1|DA5|DA6|DA7|DA8|DA14|DA15|DA16|DA17|DA18|EN1|EN2|EN3|EN4|EN5|EN6|EN7|EN8|EN9|HA0|HA1|HA2|HA3|HA4|HA5|HA6|HA7|HA8|HA9|IG1|IG2|IG3|IG4|IG5|IG6|IG7|IG8|IG9|IG11|KT1|KT2|KT3|KT4|KT5|KT6|KT7|KT8|KT9|KT17|KT18|KT19|KT22|RM1|RM2|RM3|RM4|RM5|RM6|RM7|RM8|RM9|RM10|RM11|RM12|RM13|RM14|RM15|SM1|SM2|SM3|SM4|SM5|SM6|SM7|TW1|TW2|TW3|TW4|TW5|TW6|TW7|TW8|TW9|TW10|TW11|TW12|TW13|TW14|TW15|TW19|UB1|UB2|UB3|UB4|UB5|UB6|UB7|UB8|UB9|UB10|UB11|UB18|WD3|WD6|WD23)\s*\d[A-Z]{2}$/i;
+		
+		/* 
+		E1|E2|E3|E4|E5|E6|E7|E8|E9|E10|E11|E12|E13|E14|E15|E16|E17|E18|E1W|E20|E98|
+		EC1A|EC1M|EC1N|EC1P|EC1R|EC1V|EC1Y|EC2A|EC2M|EC2N|EC2P|EC2R|EC2V|EC2Y|EC3A|EC3M|EC3N|EC3P|EC3R|EC3V|EC4A|EC4M|EC4N|EC4P|EC4R|EC4V|EC4Y|
+		N1|N2|N3|N4|N5|N6|N7|N8|N9|N10|N11|N12|N13|N14|N15|N16|N17|N18|N19|N1C|N1P|N20|N21|N22|N81|
+		NW1|NW2|NW3|NW4|NW5|NW6|NW7|NW8|NW9|NW10|NW11|NW1W|NW26|
+		SE1|SE2|SE3|SE4|SE5|SE6|SE7|SE8|SE9|SE10|SE11|SE12|SE13|SE14|SE15|SE16|SE17|SE18|SE19|SE1P|SE20|SE21|SE22|SE23|SE24|SE25|SE26|SE27|SE28|
+		SW2|SW3|SW4|SW5|SW6|SW7|SW8|SW9|SW10|SW11|SW12|SW13|SW14|SW15|SW16|SW17|SW18|SW19|SW1A|SW1E|SW1H|SW1P|SW1V|SW1W|SW1X|SW1Y|SW20|SW95|
+		W2|W3|W4|W5|W6|W7|W8|W9|W10|W11|W12|W13|W14|W1A|W1B|W1C|W1D|W1F|W1G|W1H|W1J|W1K|W1S|W1T|W1U|W1W|
+		WC1A|WC1B|WC1E|WC1H|WC1N|WC1R|WC1V|WC1X|WC2A|WC2B|WC2E|WC2H|WC2N|WC2R|
+		BR1|BR2|BR3|BR4|BR5|BR6|BR7|BR8|
+		CR0|CR2|CR3|CR4|CR5|CR6|CR7|CR8|CR9|CR44|CR90|
+		DA1|DA5|DA6|DA7|DA8|DA14|DA15|DA16|DA17|DA18|
+		EN1|EN2|EN3|EN4|EN5|EN6|EN7|EN8|EN9|
+		HA0|HA1|HA2|HA3|HA4|HA5|HA6|HA7|HA8|HA9|
+		IG1|IG2|IG3|IG4|IG5|IG6|IG7|IG8|IG9|IG11|
+		KT1|KT2|KT3|KT4|KT5|KT6|KT7|KT8|KT9|KT17|KT18|KT19|KT22|
+		RM1|RM2|RM3|RM4|RM5|RM6|RM7|RM8|RM9|RM10|RM11|RM12|RM13|RM14|RM15|
+		SM1|SM2|SM3|SM4|SM5|SM6|SM7|
+		TW1|TW2|TW3|TW4|TW5|TW6|TW7|TW8|TW9|TW10|TW11|TW12|TW13|TW14|TW15|TW19|
+		UB1|UB2|UB3|UB4|UB5|UB6|UB7|UB8|UB9|UB10|UB11|UB18|
+		WD3|WD6|WD23 */
+
+
+
+
+
+
+
+
+
+
+
+
+		
+		
+
+  // Remove spaces to test against the regular expression
+  let formattedPostcode = postcode.replace(/\s/g, '');
+
+  // Check if the postcode matches the regular expression for London postcodes
+  return londonPostcodeRegex.test(formattedPostcode);
+}
+
+		
+		
+		
+		
+		
+		
+		
+
+
+  function displayCircle(center) {
+    if (bakeryCircle) {
+      bakeryCircle.setMap(null); // Remove the previous circle
+    }
+    // Draw a new circle centered on the given location
+    bakeryCircle = new google.maps.Circle({
+      strokeColor: '#FF0000',
+      strokeOpacity: 0.8,
+      strokeWeight: 2,
+      fillColor: '#FF0000',
+      fillOpacity: 0.35,
+      map: map,
+      center: center,
+      radius: circleRadius,
+		clickable: false 
+    });
+    // Adjust the zoom level to the circle
+    map.fitBounds(bakeryCircle.getBounds());
+  }
+
+function checkPostcode() {
+  const postcodeInput = document.getElementById('postcode').value;
+  const postcode = postcodeInput.trim().toUpperCase();
+  console.log("Postcode entered:", postcode);
+	
+	// Check if the entered postcode is a valid London postcode
+  if (!isValidLondonPostcode(postcode)) {
+    displayMessage('Please enter a valid London postcode.');
+    return; // Exit the function if it's not a London postcode
+  }
+
+  console.log("London postcode entered:", postcode);
+
+  // Reset the map view only if there's a valid postcode entry
+  if (bakeryCircle) {
+    bakeryCircle.setMap(null);
+    bakeryCircle = null; // Clear the reference to the removed circle
+  }
+
+  // Initialize the geocoder
+  const geocoder = new google.maps.Geocoder();
+  geocoder.geocode({ 'address': postcode }, function (results, status) {
+    if (status === google.maps.GeocoderStatus.OK) {
+      const postcodeLocation = results[0].geometry.location;
+		
+		// Always display the circle for the entered postcode
+      displayCircle(postcodeLocation);
+
+      // Reset previous user location marker
+      if (userLocationMarker) {
+        userLocationMarker.setMap(null);
+      }
+
+      // Add new user location marker
+      userLocationMarker = new google.maps.Marker({
+        position: postcodeLocation,
+        map: map,
+        icon: 'https://dummyimage.com/17x17/ff6600/fff&text=H', // Replace with your icon
+        title: "User Postcode"
+      });
+
+      // Move map to new user location
+      map.setCenter(postcodeLocation);
+		
+		
+      // Search for nearby Gail's Bakery locations
+      const service = new google.maps.places.PlacesService(map);
+      service.nearbySearch({
+        location: postcodeLocation,
+        radius: circleRadius,
+        keyword: "GAIL's Bakery"
+      }, function (results, status) {
+        processResults(results, status, postcodeLocation); // Pass postcodeLocation
+      });
+
+    } else if (status === google.maps.GeocoderStatus.ZERO_RESULTS) {
+      // Handle no results status
+      displayMessage('Invalid postcode or no results found.');
+    } else {
+      // Handle other possible errors
+      displayMessage('Error finding location: ' + status);
+    }
+  });
+}
+
+	
+		
+
+  function processResults(results, status, postcodeLocation) {
+  // First clear out any existing markers
+  bakeryMarkers.forEach(marker => marker.setMap(null));
+  bakeryMarkers = []; // Reset the array
+
+  if (status === google.maps.places.PlacesServiceStatus.OK && results.length) 
+  {
+	  
+	  console.log('YES YES STAUTS IS OK');
+	  
+	  
+    // Filter results to include only those within the specified radius
+	  
+    let bakeriesWithinRadius = results.filter(place => {
+      if (place.name.toLowerCase().includes("gail's bakery")) {
+        const bakeryLocation = place.geometry.location;
+        const distance = calculateDistance(postcodeLocation.lat(), postcodeLocation.lng(), bakeryLocation.lat(), bakeryLocation.lng());
+        return distance <= circleRadius;
+      }
+      return false;
+    });
+
+    // Process each bakery within the radius
+    bakeriesWithinRadius.forEach((place) => {
+      const bakeryLocation = place.geometry.location;
+      const marker = new google.maps.Marker({
+        position: bakeryLocation,
+        map: map,
+        title: place.name,
+		  icon: 'https://dummyimage.com/17x17/000000/fff&text=B',
+		  animation: google.maps.Animation.DROP
+      });
+		
+
+      // Push the marker to your array of bakeryMarkers
+      bakeryMarkers.push(marker);
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: `<div><strong>${place.name}</strong><br>
+                  Address: ${place.vicinity}<br>
+                  Distance: ${calculateDistance(postcodeLocation.lat(), postcodeLocation.lng(), bakeryLocation.lat(), bakeryLocation.lng()).toFixed(2)} meters away</div>`
+      });
+	
+      // Add click listener to the marker to open the info window
+      marker.addListener('click', () => {
+        infoWindow.open({
+          anchor: marker,
+          map,
+          shouldFocus: false,
+			
+        });
+      });
+    });
+
+    // Display message about the number of locations found
+    displayMessage(`${bakeriesWithinRadius.length} Gail's Bakery location(s) found within 1km.`);
+	  
+	  if(bakeriesWithinRadius.length === 1){
+		alert('(1) Nice!');
+	  }
+	  else if(bakeriesWithinRadius.length === 2){
+		  alert('(2) WOW, V Nice!');
+	  }
+	  else if(bakeriesWithinRadius.length === 3){
+		  alert('(3) WOW, Are you kidding me?? YOU ARE SLAYING');
+	  }
+	  
+	  else if(bakeriesWithinRadius.length >= 4){
+		  alert('(4) BILLIONS');
+	  }
+	  
+
+    // If we have at least one GAIL's Bakery within radius, we draw the circle
+    if (bakeriesWithinRadius.length > 0) {
+      displayCircle(postcodeLocation, circleRadius);
+      // Set map zoom and center to the postcode location
+      map.setZoom(14);
+      map.setCenter(postcodeLocation);
+    } else {
+      displayMessage("Gail's Bakery is not within 1km of this postcode.");
+      // Optionally clear the circle if no bakery is close enough
+      /* if (bakeryCircle) {
+        bakeryCircle.setMap(null);
+      } */
+    }
+  } else {
+    displayMessage("No GAIL's Bakery locations were found.");
+	  
+	  alert('DO SOMETHIGN');
+	  
+  }
+}
+	
+
+  function clearBakeryMarkers() {
+    bakeryMarkers.forEach(marker => marker.setMap(null));
+    bakeryMarkers = [];
+  }
+
+  function displayMessage(message) {
+    document.getElementById("message").innerText = message;
+  }
+</script>
+
+			
+	
+</body>
+</html>
