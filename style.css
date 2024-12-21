@@ -1,14 +1,14 @@
 #map {
-			width: 100%;
-			height: calc(100vh - 30px);
-			position: relative;
-		}
-		#gails-bakery-content {
-			position: absolute;
-			border: 3px solid red;
-			background: #fff;
-			padding: 20px;
-			width: 400px;
+    width: 100%;
+    height: calc(100vh - 30px);
+	position: relative;
+}
+	#gails-bakery-content {
+		position: absolute;
+		border: 3px solid red;
+		background: #fff;
+		padding: 20px;
+	width: 400px;
 			height: 400px;
 			top: 20px;
 			left: 20px;
